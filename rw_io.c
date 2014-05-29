@@ -6,10 +6,10 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-/*#include "common.h"*/
+#include "common.h"
 
-#define BUFF_SIZE       2048
-#define READ_SIZE       (2048-1)
+#define BUFF_SIZE       2048+1
+#define READ_SIZE       2048
 #define BUFF_END        (&_curr_buffer[BUFF_SIZE])
 
 typedef unsigned char   uchar;
@@ -84,8 +84,8 @@ static void clear_buffers()
 // Test main function
 int main(int argc, char** argv)
 {
-   rw_openfile("si.rb");
-   printf("%x", _curr_buffer[READ_SIZE]);
+   rw_openfile("rw_io.c");
+   printf("%c", _curr_buffer);
 
    return 1;
 }
