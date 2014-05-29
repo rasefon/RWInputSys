@@ -8,8 +8,7 @@
 #include <unistd.h>
 #include "common.h"
 
-#define BUFF_SIZE       2048+1
-#define READ_SIZE       2048
+#define BUFF_SIZE       2048
 #define BUFF_END        (&_curr_buffer[BUFF_SIZE])
 
 typedef unsigned char   uchar;
@@ -24,14 +23,13 @@ static uchar    *_backup_buffer = _buffer_2;
 // position of the other buffer, we should copy the characters from both buffer 1 and buffer 2 to this buff, so that the 
 // next token can be used by parser or lexer.
 static uchar    _cat_buffer[BUFF_SIZE * 2];
-static uchar    *_pre_token_start = NULL;
-static uchar    *_curr_token_start = NULL;
-static uchar    *_curr_token_end = NULL;
-static ulong    _pre_token_len = 0;
-static ulong    _curr_token_len = 0;
-static ulong    _curr_token_index = 0;
-static ulong    _curr_lineno = 1; // current line number when parsing input buffer.
+static int      _pre_token_start = 0;
+static int      _curr_token_start = 0;
+static int      _curr_token_end = 0;
+static int      _next_char = 0;
+static int      _curr_lineno = 1; // current line number when parsing input buffer.
 static int      _curr_fd = 0;
+static bool     _use_cat_buffer = false; // flag to determine whether to use concatence buffer.
 
 static void clear_buffers();
 static void fill_buffers();
@@ -43,33 +41,64 @@ int rw_openfile(const char *fn)
       _curr_fd = ret_val;
       _curr_buffer = _buffer_1;
       _backup_buffer = _buffer_2;
-      _pre_token_start = NULL;
-      _curr_token_start = NULL;
-      _curr_token_end = NULL;
-      _curr_token_len = 0;
-      _pre_token_len = 0;
-      _curr_token_index = 0;
+      _pre_token_start = 0;
+      _curr_token_start = 0;
+      _curr_token_end = 0;
+      _next_char = 0;
       _curr_lineno = 1;
+      _use_cat_buffer = false;
 
       // clear buffers.
       clear_buffers();
       
       // Read file
       fill_buffers();
-     
    }
    return ret_val;
 }
 
 static void fill_buffers()
 {
-   ssize_t read_amout = read(_curr_fd, _curr_buffer, READ_SIZE);
-   if (read_amout == READ_SIZE) {
-      _curr_buffer[READ_SIZE] = EOF;
-      read_amout = read(_curr_fd, _backup_buffer, READ_SIZE);
-      if (read_amout == READ_SIZE) {
-         _backup_buffer[READ_SIZE] = EOF;
+   _curr_buffer = _buffer_1;
+   _backup_buffer = _buffer_2;
+   ssize_t read_amout = read(_curr_fd, _curr_buffer, BUFF_SIZE);
+   if (read_amout == BUFF_SIZE) {
+      read_amout = read(_curr_fd, _backup_buffer, BUFF_SIZE);
+   }
+}
+
+uchar rw_advance()
+{
+   uchar ret_val;
+   // make 1 step forward and return the character.
+   if ( _next_char < BUFF_SIZE) {
+      if(_curr_buffer[_next_char] != EOF) {
+         ret_val = _curr_buffer[_next_char];
       }
+      else {
+         ret_val = 0;
+      }
+   }
+   else {
+      // if backup buffer hadn't been used, swith to the backup buffer, otherwise, fill the buffers and copy previous 
+      // scanned token and current scanning token into concatence buffer.
+      int cat_buff_len = BUFF_SIZE-_pre_token_start;
+      memcpy(_cat_buffer, &_curr_buffer[_pre_token_start], cat_buff_len);
+      int pre_token_len = _curr_token_start - _pre_token_start;
+      _pre_token_start = 0;
+      _curr_token_start = pre_token_len;
+      _use_cat_buffer = true;
+
+      if (_backup_buffer != NULL) {
+         _curr_buffer = _backup_buffer;
+         _backup_buffer = NULL;
+      }
+      else {
+         // Get characters from file.
+         fill_buffers();
+         _next_char = 0;
+      }
+      ret_val = _curr_buffer[_next_char];
    }
 }
 
@@ -85,7 +114,6 @@ static void clear_buffers()
 int main(int argc, char** argv)
 {
    rw_openfile("rw_io.c");
-   printf("%c", _curr_buffer);
 
    return 1;
 }
