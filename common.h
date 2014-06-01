@@ -16,4 +16,10 @@
 #endif
 #endif
 
+#ifdef RWDEBUG
+#define  DBG(x)  x
+#else
+#define  DBG(x)   
+#endif
+
 #endif
