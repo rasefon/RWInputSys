@@ -9,6 +9,6 @@ unsigned char* rw_curr_token();
 int rw_curr_token_len();
 int rw_curr_lineno();
 int rw_is_top();
-int rw_openfile(const char *fn)
+int rw_openfile(const char *fn);
 
 #endif
